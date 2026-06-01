@@ -251,3 +251,187 @@ exports.getProgress = async (userId) => {
     totalCount,
   };
 };
+
+// 일기 작성
+exports.createDiary = async ({ userId, missionExecutionId, title, content, emotions }) => {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 같은 missionExecutionId에 대해 한 번만 작성 가능하도록 체크
+    const [existing] = await connection.query(
+      `
+      SELECT diary_id AS diaryId
+      FROM diary
+      WHERE user_id = ?
+        AND mission_execution_id = ?
+      `,
+      [userId, missionExecutionId]
+    );
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      return {
+        status: 409,
+        message: '이미 해당 미션에 대한 일기가 작성되었습니다.',
+      };
+    }
+
+    const [result] = await connection.query(
+      `
+      INSERT INTO diary
+        (user_id, mission_execution_id, title, content)
+      VALUES (?, ?, ?, ?)
+      `,
+      [userId, missionExecutionId, title, content]
+    );
+
+    const diaryId = result.insertId;
+
+    const emotionData = emotions.map((emotion) => [
+      diaryId,
+      emotion,
+    ]);
+
+    await connection.query(
+      `
+      INSERT INTO emotion
+        (diary_id, emotion_tag_name)
+      VALUES ?
+      `,
+      [emotionData]
+    );
+
+    await connection.commit();
+
+    return {
+      diaryId,
+      userId: Number(userId),
+      missionExecutionId: Number(missionExecutionId),
+      title,
+      content,
+      emotions,
+    };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+};
+
+// 내 일기 목록 조회
+exports.getDiaries = async (userId) => {
+  const sql = `
+    SELECT
+      d.diary_id AS diaryId,
+      d.user_id AS userId,
+      d.mission_execution_id AS missionExecutionId,
+      d.title,
+      d.content,
+      d.created_at AS createdAt,
+      e.emotion_tag_name AS emotionTag
+    FROM diary d
+    LEFT JOIN emotion e ON d.diary_id = e.diary_id
+    WHERE d.user_id = ?
+    ORDER BY d.created_at DESC, e.emotion_id ASC
+  `;
+
+  const [rows] = await db.query(sql, [userId]);
+
+  const diaryMap = new Map();
+
+  rows.forEach((row) => {
+    if (!diaryMap.has(row.diaryId)) {
+      diaryMap.set(row.diaryId, {
+        diaryId: row.diaryId,
+        userId: row.userId,
+        missionExecutionId: row.missionExecutionId,
+        title: row.title,
+        content: row.content,
+        emotions: [],
+        createdAt: row.createdAt,
+      });
+    }
+
+    if (row.emotionTag) {
+      diaryMap.get(row.diaryId).emotions.push(row.emotionTag);
+    }
+  });
+
+  return Array.from(diaryMap.values());
+};
+
+// 일기 상세 조회
+exports.getDiaryById = async ({ userId, diaryId }) => {
+  const sql = `
+    SELECT
+      d.diary_id AS diaryId,
+      d.user_id AS userId,
+      d.mission_execution_id AS missionExecutionId,
+      d.title,
+      d.content,
+      d.created_at AS createdAt,
+      e.emotion_tag_name AS emotionTag
+    FROM diary d
+    LEFT JOIN emotion e ON d.diary_id = e.diary_id
+    WHERE d.user_id = ?
+      AND d.diary_id = ?
+    ORDER BY e.emotion_id ASC
+  `;
+
+  const [rows] = await db.query(sql, [userId, diaryId]);
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const diary = {
+    diaryId: rows[0].diaryId,
+    userId: rows[0].userId,
+    missionExecutionId: rows[0].missionExecutionId,
+    title: rows[0].title,
+    content: rows[0].content,
+    emotions: [],
+    createdAt: rows[0].createdAt,
+  };
+
+  rows.forEach((row) => {
+    if (row.emotionTag) {
+      diary.emotions.push(row.emotionTag);
+    }
+  });
+
+  return diary;
+};
+
+// 일기 작성 여부 확인
+exports.checkDiary = async ({ userId, missionExecutionId }) => {
+  const sql = `
+    SELECT
+      diary_id AS diaryId
+    FROM diary
+    WHERE user_id = ?
+      AND mission_execution_id = ?
+    LIMIT 1
+  `;
+
+  const [rows] = await db.query(sql, [userId, missionExecutionId]);
+
+  if (rows.length === 0) {
+    return {
+      missionExecutionId: Number(missionExecutionId),
+      hasDiary: false,
+      canWrite: true,
+      diaryId: null,
+    };
+  }
+
+  return {
+    missionExecutionId: Number(missionExecutionId),
+    hasDiary: true,
+    canWrite: false,
+    diaryId: rows[0].diaryId,
+  };
+};
