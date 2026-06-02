@@ -7,6 +7,7 @@ const requireUser = require('../middlewares/requireUser');
 // Garden
 router.get('/garden', requireUser, growthDiaryController.getGarden);
 router.post('/garden/plant', requireUser, growthDiaryController.plantSeed);
+// router.post('/garden/harvest', requireUser, growthDiaryController.harvest);
 
 // Growth Rate
 router.post('/growth-rate', requireUser, growthDiaryController.increaseGrowthRate);

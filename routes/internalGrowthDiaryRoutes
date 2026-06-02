@@ -1,0 +1,19 @@
+const express = require('express');
+const router = express.Router();
+
+const growthDiaryController = require('../controllers/growthDiaryController');
+const requireUser = require('../middlewares/requireUser');
+
+// 최신 트리 상태 조회
+router.get('/trees/latest', growthDiaryController.getLatestTreeInternal);
+
+// 키울 과일 심기 / 지급
+router.post('/users/:userId/planted-fruits', growthDiaryController.plantFruitInternal);
+
+// 심은 과일 삭제 / 초기화
+router.delete('/users/:userId/planted-fruits', growthDiaryController.clearPlantedFruitInternal);
+
+// 현재 성장률 기반 미션 진행상황 조회
+router.get('/growth-diary/progress', growthDiaryController.getProgressInternal);
+
+module.exports = router;

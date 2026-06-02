@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const growthDiaryRoutes = require('./routes/growthDiaryRoutes');
+const internalGrowthDiaryRoutes = require('./routes/internalGrowthDiaryRoutes');
 
 const db = require('./config/db');
 
@@ -19,6 +20,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/v1/growth-diary', growthDiaryRoutes);
+app.use('/api/internal/v1', internalGrowthDiaryRoutes);
 
 const PORT = process.env.PORT || 3005;
 

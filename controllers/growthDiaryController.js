@@ -280,3 +280,179 @@ exports.checkDiary = async (req, res) => {
     });
   }
 };
+
+// 내부 API: 성장률 증가 처리
+exports.increaseGrowthRateInternal = async (req, res) => {
+  try {
+    const { userId, growthStatusId, changedRate, reason } = req.body;
+
+    if (!userId || !growthStatusId || !changedRate || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId, growthStatusId, changedRate, reason은 필수입니다.',
+      });
+    }
+
+    const result = await growthDiaryService.increaseGrowthRate({
+      userId,
+      growthStatusId,
+      changedRate,
+      reason,
+    });
+
+    if (result.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: '성장 상태를 찾을 수 없습니다.',
+      });
+    }
+
+    if (result.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: '성장률이 반영되었습니다.',
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// 내부 API: 최신 나무 성장도 및 수확 상태 조회
+exports.getLatestTreeInternal = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId는 필수입니다.',
+      });
+    }
+
+    const result = await growthDiaryService.getGarden(userId);
+
+    if (!result.hasPlanted) {
+      return res.status(200).json({
+        growth_rate: 0,
+        is_harvested: false,
+      });
+    }
+
+    return res.status(200).json({
+      growth_rate: result.growthStatus.growthRate,
+      is_harvested: Boolean(result.growthStatus.isHarvested),
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// 내부 API: 유저 마당에 나무 심기
+exports.plantFruitInternal = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { item_type_id, itemTypeId, level } = req.body;
+
+    // Mission 쪽에서는 item_type_id로 보낼 수 있고,
+    // 일반 JS 스타일에서는 itemTypeId로 보낼 수도 있으므로 둘 다 허용
+    const finalItemTypeId = itemTypeId || item_type_id;
+    const finalLevel = level || 1;
+
+    if (!userId || !finalItemTypeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId, item_type_id는 필수입니다.',
+      });
+    }
+
+    const result = await growthDiaryService.plantSeed({
+      userId,
+      itemTypeId: finalItemTypeId,
+      level: finalLevel,
+    });
+
+    if (result.status === 409) {
+      return res.status(409).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: '심을 과일이 등록되었습니다.',
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// 내부 API: 심은 나무 삭제/초기화
+exports.clearPlantedFruitInternal = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId는 필수입니다.',
+      });
+    }
+
+    const result = await growthDiaryService.clearPlantedFruit(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: '심은 과일이 초기화되었습니다.',
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// 내부 API: 현재 성장률 기반 미션 진행상황 조회
+exports.getProgressInternal = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId는 필수입니다.',
+      });
+    }
+
+    const progress = await growthDiaryService.getProgress(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: progress,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

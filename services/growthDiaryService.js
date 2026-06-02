@@ -435,3 +435,19 @@ exports.checkDiary = async ({ userId, missionExecutionId }) => {
     diaryId: rows[0].diaryId,
   };
 };
+
+// 심은 과일 삭제/초기화
+exports.clearPlantedFruit = async (userId) => {
+  const sql = `
+    DELETE FROM growth_status
+    WHERE user_id = ?
+      AND is_harvested = false
+  `;
+
+  const [result] = await db.query(sql, [userId]);
+
+  return {
+    userId: Number(userId),
+    deletedCount: result.affectedRows,
+  };
+};
