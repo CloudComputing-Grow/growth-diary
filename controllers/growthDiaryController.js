@@ -7,12 +7,12 @@ exports.getGarden = async (req, res) => {
 
     const garden = await growthDiaryService.getGarden(userId);
 
-    res.json({
+    return res.json({
       success: true,
       data: garden,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -45,13 +45,44 @@ exports.plantSeed = async (req, res) => {
       });
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: '씨앗이 심어졌습니다.',
       data: result,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// 수확 처리
+exports.harvest = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { growthStatusId } = req.body;
+
+    const result = await growthDiaryService.harvest({
+      userId,
+      growthStatusId,
+    });
+
+    if (result.status === 404 || result.status === 400) {
+      return res.status(result.status).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: '수확 처리가 완료되었습니다.',
+      data: result,
+    });
+  } catch (err) {
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -92,13 +123,13 @@ exports.increaseGrowthRate = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: '성장률이 반영되었습니다.',
       data: result,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -123,12 +154,12 @@ exports.getGrowthRateHistory = async (req, res) => {
       growthStatusId,
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: history,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -142,12 +173,12 @@ exports.getProgress = async (req, res) => {
 
     const progress = await growthDiaryService.getProgress(userId);
 
-    res.json({
+    return res.json({
       success: true,
       data: progress,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -189,13 +220,13 @@ exports.createDiary = async (req, res) => {
       });
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: '일기가 작성되었습니다.',
       data: result,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -209,12 +240,12 @@ exports.getDiaries = async (req, res) => {
 
     const diaries = await growthDiaryService.getDiaries(userId);
 
-    res.json({
+    return res.json({
       success: true,
       data: diaries,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -239,12 +270,12 @@ exports.getDiaryById = async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: diary,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -269,12 +300,12 @@ exports.checkDiary = async (req, res) => {
       missionExecutionId,
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: result,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -366,8 +397,6 @@ exports.plantFruitInternal = async (req, res) => {
     const { userId } = req.params;
     const { item_type_id, itemTypeId, level } = req.body;
 
-    // Mission 쪽에서는 item_type_id로 보낼 수 있고,
-    // 일반 JS 스타일에서는 itemTypeId로 보낼 수도 있으므로 둘 다 허용
     const finalItemTypeId = itemTypeId || item_type_id;
     const finalLevel = level || 1;
 

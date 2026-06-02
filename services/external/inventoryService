@@ -1,0 +1,55 @@
+const axios = require('axios');
+
+const INTERNAL_API_URL =
+  (process.env.API_GATEWAY_URL || 'http://api-gateway') + '/api/internal/v1';
+
+const inventoryService = {
+  // 씨앗 심기 시 인벤토리 차감
+  async consumeSeed({ userId, itemTypeId }) {
+    try {
+      const response = await axios.post(
+        `${INTERNAL_API_URL}/inventory/consume-seed`,
+        {
+          userId,
+          itemTypeId,
+        },
+        {
+          headers: {
+            'x-user-id': userId,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error(`[Internal Error] inventoryService.consumeSeed 실패: ${error.message}`);
+      throw error;
+    }
+  },
+
+  // 수확 보상 지급
+  async rewardItem({ userId, itemTypeId, qty }) {
+    try {
+      const response = await axios.post(
+        `${INTERNAL_API_URL}/inventory/reward`,
+        {
+          userId,
+          itemTypeId,
+          qty,
+        },
+        {
+          headers: {
+            'x-user-id': userId,
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error(`[Internal Error] inventoryService.rewardItem 실패: ${error.message}`);
+      throw error;
+    }
+  },
+};
+
+module.exports = inventoryService;

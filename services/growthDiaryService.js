@@ -1,5 +1,8 @@
 const db = require('../config/db');
 
+const inventoryService = require('./external/inventoryService');
+const achievementService = require('./external/achievementService');
+
 // 현재 심어진 나무/성장 상태 조회
 exports.getGarden = async (userId) => {
   const sql = `
@@ -450,4 +453,171 @@ exports.clearPlantedFruit = async (userId) => {
     userId: Number(userId),
     deletedCount: result.affectedRows,
   };
+};
+
+// 수확 처리
+exports.harvest = async ({ userId, growthStatusId }) => {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    let sql = `
+      SELECT
+        growth_status_id AS growthStatusId,
+        user_id AS userId,
+        item_type_id AS itemTypeId,
+        level,
+        growth_rate AS growthRate,
+        is_harvested AS isHarvested
+      FROM growth_status
+      WHERE user_id = ?
+        AND is_harvested = false
+    `;
+
+    const params = [userId];
+
+    if (growthStatusId) {
+      sql += ` AND growth_status_id = ? `;
+      params.push(growthStatusId);
+    }
+
+    sql += `
+      ORDER BY planted_at DESC
+      LIMIT 1
+    `;
+
+    const [rows] = await connection.query(sql, params);
+
+    if (rows.length === 0) {
+      await connection.rollback();
+      return {
+        status: 404,
+        message: '수확 가능한 나무가 없습니다.',
+      };
+    }
+
+    const growthStatus = rows[0];
+
+    if (Number(growthStatus.growthRate) < 100) {
+      await connection.rollback();
+      return {
+        status: 400,
+        message: '성장률이 100%가 되어야 수확할 수 있습니다.',
+      };
+    }
+
+    await connection.query(
+      `
+      UPDATE growth_status
+      SET is_harvested = true,
+          harvested_at = NOW()
+      WHERE growth_status_id = ?
+        AND user_id = ?
+      `,
+      [growthStatus.growthStatusId, userId]
+    );
+
+    await connection.commit();
+
+    const itemTypeId = Number(growthStatus.itemTypeId);
+
+    // Inventory item_type_id 매핑 기준:
+    // 2 = 일반 사과, 3 = 황금 사과
+    // 4 = 일반 체리, 5 = 황금 체리 ...
+    const normalItemTypeId = itemTypeId % 2 === 0 ? itemTypeId : itemTypeId - 1;
+    const goldItemTypeId = normalItemTypeId + 1;
+
+    const externalResults = {
+      inventory: {
+        normalReward: null,
+        goldReward: null,
+      },
+      achievement: {
+        normal: null,
+        gold: null,
+      },
+    };
+
+    // Inventory: 일반 과일 2개 지급
+    try {
+      externalResults.inventory.normalReward = await inventoryService.rewardItem({
+        userId,
+        itemTypeId: normalItemTypeId,
+        qty: 2,
+      });
+    } catch (err) {
+      console.error('Inventory 일반 과일 지급 실패:', err.message);
+      externalResults.inventory.normalReward = {
+        success: false,
+        message: err.message,
+      };
+    }
+
+    // Inventory: 황금 과일 1개 지급
+    try {
+      externalResults.inventory.goldReward = await inventoryService.rewardItem({
+        userId,
+        itemTypeId: goldItemTypeId,
+        qty: 1,
+      });
+    } catch (err) {
+      console.error('Inventory 황금 과일 지급 실패:', err.message);
+      externalResults.inventory.goldReward = {
+        success: false,
+        message: err.message,
+      };
+    }
+
+    // Achievement: 일반 과일 도감 등록
+    try {
+      externalResults.achievement.normal =
+        await achievementService.updateCollectionByHarvest({
+          userId,
+          itemTypeId: normalItemTypeId,
+        });
+    } catch (err) {
+      console.error('Achievement 일반 과일 도감 등록 실패:', err.message);
+      externalResults.achievement.normal = {
+        success: false,
+        message: err.message,
+      };
+    }
+
+    // Achievement: 황금 과일 도감 등록
+    try {
+      externalResults.achievement.gold =
+        await achievementService.updateCollectionByHarvest({
+          userId,
+          itemTypeId: goldItemTypeId,
+        });
+    } catch (err) {
+      console.error('Achievement 황금 과일 도감 등록 실패:', err.message);
+      externalResults.achievement.gold = {
+        success: false,
+        message: err.message,
+      };
+    }
+
+    return {
+      status: 200,
+      growthStatusId: Number(growthStatus.growthStatusId),
+      userId: Number(userId),
+      itemTypeId,
+      normalItemTypeId,
+      goldItemTypeId,
+      growthRate: Number(growthStatus.growthRate),
+      isHarvested: true,
+      rewards: {
+        normalQty: 2,
+        goldQty: 1,
+      },
+      externalResults,
+    };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
 };
