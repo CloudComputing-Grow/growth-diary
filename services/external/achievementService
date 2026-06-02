@@ -1,15 +1,13 @@
 const axios = require('axios');
 
-const API_GATEWAY_URL = process.env.API_GATEWAY_URL || 'http://api-gateway';
-const ACHIEVEMENT_INTERNAL_PATH =
-  process.env.ACHIEVEMENT_INTERNAL_PATH || '/internal/achievements';
+const ACHIEVEMENT_SERVER_URL =
+  process.env.ACHIEVEMENT_SERVER_URL || 'http://localhost:3002';
 
 const achievementService = {
-  // 수확한 과일 도감 등록
   async updateCollectionByHarvest({ userId, itemTypeId }) {
     try {
       const response = await axios.post(
-        `${API_GATEWAY_URL}${ACHIEVEMENT_INTERNAL_PATH}`,
+        `${ACHIEVEMENT_SERVER_URL}/internal/achievements`,
         {
           userId,
           itemTypeId,
@@ -20,7 +18,7 @@ const achievementService = {
       return response.data;
     } catch (error) {
       console.error(
-        `[Internal Error] achievementService.updateCollectionByHarvest 실패: ${error.message}`
+        `[External Error] achievementService.updateCollectionByHarvest 실패: ${error.message}`
       );
       throw error;
     }

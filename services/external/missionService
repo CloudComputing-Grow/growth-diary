@@ -1,14 +1,13 @@
 const axios = require('axios');
 
-const INTERNAL_API_URL =
-  (process.env.API_GATEWAY_URL || 'http://api-gateway') + '/api/internal/v1';
+const MISSION_SERVER_URL =
+  process.env.MISSION_SERVER_URL || 'http://localhost:3003';
 
 const missionService = {
-  // missionExecutionId가 현재 유저의 완료된 미션인지 확인
   async checkMissionCompleted({ userId, missionExecutionId }) {
     try {
       const response = await axios.get(
-        `${INTERNAL_API_URL}/missions/executions/${missionExecutionId}/status`,
+        `${MISSION_SERVER_URL}/api/internal/v1/missions/executions/${missionExecutionId}/status`,
         {
           headers: {
             'x-user-id': userId,
@@ -19,7 +18,7 @@ const missionService = {
       return response.data?.data || response.data;
     } catch (error) {
       console.error(
-        `[Internal Error] missionService.checkMissionCompleted 실패: ${error.message}`
+        `[External Error] missionService.checkMissionCompleted 실패: ${error.message}`
       );
       throw error;
     }
