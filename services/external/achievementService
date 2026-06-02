@@ -10,16 +10,13 @@ const achievementService = {
         `${ACHIEVEMENT_SERVER_URL}/internal/achievements`,
         {
           userId,
-          itemTypeId,
-          achievedBy: 'HARVEST',
+          itemId: itemTypeId,   // itemTypeId → itemId
+          type: 'HARVEST',      // achievedBy → type
         }
       );
-
       return response.data;
     } catch (error) {
-      console.error(
-        `[External Error] achievementService.updateCollectionByHarvest 실패: ${error.message}`
-      );
+      console.error(`[External Error] achievementService 실패: ${error.message}`);
       throw error;
     }
   },

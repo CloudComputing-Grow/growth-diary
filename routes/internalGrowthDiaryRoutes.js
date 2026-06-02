@@ -15,5 +15,6 @@ router.delete('/users/:userId/planted-fruits', growthDiaryController.clearPlante
 
 // 현재 성장률 기반 미션 진행상황 조회
 router.get('/growth-diary/progress', growthDiaryController.getProgressInternal);
+router.post('/growth-diary/growth-rate', growthDiaryController.increaseGrowthRateInternal);
 
 module.exports = router;
