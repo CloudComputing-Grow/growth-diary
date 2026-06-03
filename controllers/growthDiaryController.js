@@ -45,6 +45,13 @@ exports.plantSeed = async (req, res) => {
       });
     }
 
+    if (result.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
     return res.status(201).json({
       success: true,
       message: '씨앗이 심어졌습니다.',
@@ -315,9 +322,12 @@ exports.checkDiary = async (req, res) => {
 // 내부 API: 성장률 증가 처리
 exports.increaseGrowthRateInternal = async (req, res) => {
   try {
+    const headerUserId = req.headers['x-user-id'];
     const { userId, growthStatusId, changedRate, reason } = req.body;
 
-    if (!userId || !growthStatusId || !changedRate || !reason) {
+    const finalUserId = userId || headerUserId;
+
+    if (!finalUserId || !growthStatusId || !changedRate || !reason) {
       return res.status(400).json({
         success: false,
         message: 'userId, growthStatusId, changedRate, reason은 필수입니다.',
@@ -325,7 +335,7 @@ exports.increaseGrowthRateInternal = async (req, res) => {
     }
 
     const result = await growthDiaryService.increaseGrowthRate({
-      userId,
+      userId: finalUserId,
       growthStatusId,
       changedRate,
       reason,
@@ -407,7 +417,7 @@ exports.plantFruitInternal = async (req, res) => {
       });
     }
 
-    const result = await growthDiaryService.plantSeed({
+    const result = await growthDiaryService.plantSeedInternal({
       userId,
       itemTypeId: finalItemTypeId,
       level: finalLevel,

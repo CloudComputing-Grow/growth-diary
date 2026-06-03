@@ -5,41 +5,36 @@ const INVENTORY_SERVER_URL =
 
 const inventoryService = {
   async consumeSeed({ userId, itemTypeId }) {
-    try {
-      const response = await axios.post(
-        `${INVENTORY_SERVER_URL}/api/v1/inventory/consume-seed`,
-        { itemTypeId },
-        {
-          headers: {
-            'x-user-id': userId,
-          },
-        }
-      );
+    const response = await axios.post(
+      `${INVENTORY_SERVER_URL}/api/v1/inventory/consume-seed`,
+      {
+        itemTypeId,
+      },
+      {
+        headers: {
+          'x-user-id': userId,
+        },
+      }
+    );
 
-      return response.data;
-    } catch (error) {
-      console.error(`[External Error] inventoryService.consumeSeed 실패: ${error.message}`);
-      throw error;
-    }
+    return response.data;
   },
 
   async rewardItem({ userId, itemTypeId, qty }) {
-    try {
-      const response = await axios.post(
-        `${INVENTORY_SERVER_URL}/api/v1/inventory/reward`,
-        { itemTypeId, qty },
-        {
-          headers: {
-            'x-user-id': userId,
-          },
-        }
-      );
+    const response = await axios.post(
+      `${INVENTORY_SERVER_URL}/api/v1/inventory/reward`,
+      {
+        itemTypeId,
+        qty,
+      },
+      {
+        headers: {
+          'x-user-id': userId,
+        },
+      }
+    );
 
-      return response.data;
-    } catch (error) {
-      console.error(`[External Error] inventoryService.rewardItem 실패: ${error.message}`);
-      throw error;
-    }
+    return response.data;
   },
 };
 
