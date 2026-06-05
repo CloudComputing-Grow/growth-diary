@@ -1,7 +1,6 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors = require('cors');
 const growthDiaryRoutes = require('./routes/growthDiaryRoutes');
 const internalGrowthDiaryRoutes = require('./routes/internalGrowthDiaryRoutes');
 
@@ -9,7 +8,6 @@ const db = require('./config/db');
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
 
 app.get('/health', (req, res) => {
