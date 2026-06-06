@@ -70,36 +70,6 @@ exports.plantSeed = async ({ userId, itemTypeId, level }) => {
       };
     }
 
-    // Inventory에서 씨앗 보유 확인 및 1개 차감
-    let consumeSeedResult;
-
-    try {
-      consumeSeedResult = await inventoryService.consumeSeed({
-        userId: Number(userId),
-        itemTypeId: Number(itemTypeId),
-      });
-    } catch (error) {
-      await connection.rollback();
-
-      return {
-        status: error.response?.status || 400,
-        message:
-          error.response?.data?.message ||
-          '인벤토리 씨앗 차감에 실패했습니다.',
-      };
-    }
-
-    if (!consumeSeedResult?.success) {
-      await connection.rollback();
-
-      return {
-        status: 400,
-        message:
-          consumeSeedResult?.message ||
-          '인벤토리 씨앗 차감에 실패했습니다.',
-      };
-    }
-
     const [result] = await connection.query(
       `
       INSERT INTO growth_status
@@ -119,10 +89,6 @@ exports.plantSeed = async ({ userId, itemTypeId, level }) => {
       level: Number(level),
       growthRate: 0,
       isHarvested: false,
-      inventory: {
-        seedConsumed: true,
-        remainingQty: consumeSeedResult.data?.remaining_qty,
-      },
     };
   } catch (err) {
     await connection.rollback();
