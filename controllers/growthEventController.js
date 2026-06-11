@@ -22,6 +22,7 @@ const growthEventController = {
     } catch (err) {
       await connection.rollback();
       console.error(`[RabbitMQ] 유저 ${userId}번 삭제 실패:`, err.message);
+      throw err; // 바깥으로 에러 전파 → nack으로 재시도
     } finally {
       connection.release();
     }
@@ -75,6 +76,7 @@ const growthEventController = {
     } catch (err) {
       await connection.rollback();
       console.error(`[growth-diary] 유저 ${userId} 성장률 증가 실패:`, err.message);
+      throw err; 
     } finally {
       connection.release();
     }
