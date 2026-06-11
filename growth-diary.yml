@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grow-diary-deployment
+  labels:
+    app: grow-diary
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: grow-diary
+  template:
+    metadata:
+      labels:
+        app: grow-diary
+    spec:
+      containers:
+      - name: grow-diary-container
+        image: maybsubin/growth-diary:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3005
+        envFrom:
+        - configMapRef:
+            name: grow-diary-config
+        - secretRef:
+            name: grow-diary-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: growth-diary
+spec:
+  type: ClusterIP
+  selector:
+    app: grow-diary
+  ports:
+    - protocol: TCP
+      port: 3005
+      targetPort: 3005
